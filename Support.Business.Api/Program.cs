@@ -5,6 +5,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<CustomerService>();
+builder.Services.AddSingleton<OrderService>();
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -24,11 +25,19 @@ app.MapGet(
             return Results.BadRequest();
 
         var customer = customerService.GetById(customerId);
+        return customer is null ? Results.NotFound() : Results.Ok(customer);
+    });
 
-        if (customer is null)
-            return Results.NotFound();
 
-        return Results.Ok(customer);
+app.MapGet(
+    "/api/orders/{orderId}",
+    (string orderId, OrderService orderService) =>
+    {
+        if (string.IsNullOrWhiteSpace(orderId))
+            return Results.BadRequest();
+
+        var order = orderService.GetById(orderId);
+        return order is null ? Results.NotFound() : Results.Ok(order);
     });
 
 app.Run();
