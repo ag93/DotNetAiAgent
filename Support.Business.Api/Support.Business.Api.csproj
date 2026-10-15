@@ -12,10 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Customers\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Support.Contracts\Support.Contracts.csproj" />
   </ItemGroup>
 
