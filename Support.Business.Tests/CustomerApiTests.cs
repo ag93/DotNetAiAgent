@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Support.Business.Api.Customers;
+using Support.Contracts.Customers;
 
 namespace Support.Business.Tests;
 

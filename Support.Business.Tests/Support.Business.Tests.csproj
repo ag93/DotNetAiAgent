@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Support.Business.Api\Support.Business.Api.csproj" />
+    <ProjectReference Include="..\Support.Contracts\Support.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-﻿using Support.Business.Api.Customers;
+﻿using Support.Contracts.Customers;
 
 namespace Support.Business.Api.Services;
 
