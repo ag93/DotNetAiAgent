@@ -13,10 +13,14 @@ builder.Services.AddHttpClient<BusinessApiCustomerClient>(
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
-app.MapOpenApi();
 app.UseHttpsRedirection();
-app.UseSwagger();
-app.UseSwaggerUI();
+if (builder.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
 
 app.MapGet(
     "/api/agent/customers/{customerId}",
