@@ -1,4 +1,3 @@
-using Support.Business.Api.Customers;
 using Support.Business.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,3 +34,5 @@ app.MapGet(
     });
 
 app.Run();
+
+public partial class Program { }
