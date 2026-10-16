@@ -22,6 +22,7 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
         client.BaseAddress = new Uri(baseUrl);
     });
 builder.Services.AddScoped<CustomerLookupTool>();
+builder.Services.AddScoped<OrderLookupTool>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
