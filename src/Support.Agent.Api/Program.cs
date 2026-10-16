@@ -1,4 +1,5 @@
 using Support.Agent.Api.Services;
+using Support.Agent.Api.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -20,7 +21,7 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
 
         client.BaseAddress = new Uri(baseUrl);
     });
-
+builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
