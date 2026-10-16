@@ -10,6 +10,17 @@ builder.Services.AddHttpClient<BusinessApiCustomerClient>(
             ?? throw new InvalidOperationException("BusinessApi:BaseUrl is not configured.");
         client.BaseAddress = new Uri(baseUrl);
     });
+
+builder.Services.AddHttpClient<BusinessApiOrderClient>(
+    client =>
+    {
+        var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
+            ?? throw new InvalidOperationException(
+                "BusinessApi:BaseUrl is not configured.");
+
+        client.BaseAddress = new Uri(baseUrl);
+    });
+
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -36,6 +47,31 @@ app.MapGet(
                 return customer is null
                     ? Results.NotFound()
                     : Results.Ok(customer);
+            }
+            catch (HttpRequestException)
+            {
+                return Results.Problem(
+                    title: "Business API request failed.",
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+        });
+
+
+
+app.MapGet(
+    "/api/agent/orders/{orderId}",
+    async (
+        string orderId,
+        BusinessApiOrderClient orderClient,
+        CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var order = await orderClient.GetByIdAsync(orderId,  cancellationToken);
+
+                return order is null
+                    ? Results.NotFound()
+                    : Results.Ok(order);
             }
             catch (HttpRequestException)
             {
