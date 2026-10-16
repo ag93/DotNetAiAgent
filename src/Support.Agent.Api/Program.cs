@@ -1,3 +1,5 @@
+using Microsoft.Extensions.AI;
+using OllamaSharp;
 using Support.Agent.Api.Services;
 using Support.Agent.Api.Tools;
 
@@ -24,6 +26,17 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
 builder.Services.AddOpenApi();
+
+builder.Services.AddSingleton<IChatClient>(_ =>
+{
+    var baseUrl = builder.Configuration["Ollama:BaseUrl"]
+        ?? throw new InvalidOperationException("Ollama:BaseUrl is not configured.");
+
+    var model = builder.Configuration["Ollama:Model"]
+        ?? throw new InvalidOperationException("Ollama:Model is not configured.");
+
+    return new OllamaApiClient(new Uri(baseUrl), model);
+});
 
 var app = builder.Build();
 app.UseHttpsRedirection();
@@ -84,4 +97,29 @@ app.MapGet(
         });
 
 
+app.MapPost(
+    "/api/agent/chat-test",
+    async (
+        ChatTestRequest request,
+        IChatClient chatClient,
+        CancellationToken cancellationToken) =>
+    {
+        if (string.IsNullOrWhiteSpace(request.Message))
+        {
+            return Results.BadRequest(
+                "A message is required.");
+        }
+
+        var response = await chatClient.GetResponseAsync(
+            request.Message,
+            cancellationToken: cancellationToken);
+
+        return Results.Ok(new ChatTestResponse(response.Text));
+    });
+
 app.Run();
+
+public partial class Program { }
+
+public sealed record ChatTestRequest(string Message);
+public sealed record ChatTestResponse(string? Reply);
