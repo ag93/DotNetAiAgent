@@ -1,5 +1,6 @@
 using Microsoft.Extensions.AI;
 using OllamaSharp;
+using Support.Agent.Api.Agents;
 using Support.Agent.Api.Services;
 using Support.Agent.Api.Tools;
 
@@ -25,6 +26,7 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
     });
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
+builder.Services.AddScoped<CustomerAgent>();
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<IChatClient>(_ =>
@@ -35,7 +37,14 @@ builder.Services.AddSingleton<IChatClient>(_ =>
     var model = builder.Configuration["Ollama:Model"]
         ?? throw new InvalidOperationException("Ollama:Model is not configured.");
 
-    return new OllamaApiClient(new Uri(baseUrl), model);
+    return new ChatClientBuilder(
+        new OllamaApiClient(new Uri(baseUrl), model))
+        .UseFunctionInvocation(
+            configure: invoker =>
+            {
+                invoker.MaximumIterationsPerRequest = 3;
+            })
+        .Build();
 });
 
 var app = builder.Build();
@@ -117,9 +126,30 @@ app.MapPost(
         return Results.Ok(new ChatTestResponse(response.Text));
     });
 
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapPost(
+        "/api/agent/customer-chat",
+        async (
+            CustomerChatRequest request, CustomerAgent agent, CancellationToken cancellationToken) =>
+            {
+                if (string.IsNullOrWhiteSpace(request.Message))
+                {
+                    return Results.BadRequest("A message is required.");
+                }
+
+                var result = await agent.AskAsync(request.Message, cancellationToken);
+
+                return Results.Ok(result);
+            });
+}
+
+
 app.Run();
 
 public partial class Program { }
 
 public sealed record ChatTestRequest(string Message);
 public sealed record ChatTestResponse(string? Reply);
+public sealed record CustomerChatRequest(string Message);
