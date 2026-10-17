@@ -15,7 +15,18 @@ builder.Services.AddHttpClient<BusinessApiCustomerClient>(
         client.BaseAddress = new Uri(baseUrl);
     });
 
+builder.Services.AddHttpClient<BusinessApiOrderClient>(
+    client =>
+    {
+        var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
+            ?? throw new InvalidOperationException(
+                "BusinessApi:BaseUrl is not configured.");
+
+        client.BaseAddress = new Uri(baseUrl);
+    });
+
 builder.Services.AddScoped<CustomerLookupTool>();
+builder.Services.AddScoped<OrderLookupTool>();
 
 
 builder.Services
@@ -25,7 +36,8 @@ builder.Services
         options.SessionMode = HttpServerSessionMode.Stateless;
     })
     .WithTools<ServerInfoTool>()
-    .WithTools<CustomerMcpTool>();
+    .WithTools<CustomerMcpTool>()
+    .WithTools<OrderMcpTool>();
 
 var app = builder.Build();
 

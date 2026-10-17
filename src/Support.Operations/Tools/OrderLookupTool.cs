@@ -1,7 +1,7 @@
-﻿using Support.Agent.Api.Services;
-using Support.Contracts.Orders;
+﻿using Support.Contracts.Orders;
+using Support.Operations.Services;
 
-namespace Support.Agent.Api.Tools;
+namespace Support.Operations.Tools;
 
 public sealed class OrderLookupTool
 {

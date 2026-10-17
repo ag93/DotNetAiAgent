@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.AI;
-using Support.Agent.Api.Tools;
 using Support.Operations.Tools;
 
 namespace Support.Agent.Api.Agents;

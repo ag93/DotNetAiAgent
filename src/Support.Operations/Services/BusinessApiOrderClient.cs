@@ -1,7 +1,8 @@
 ﻿using System.Net;
+using System.Net.Http.Json;
 using Support.Contracts.Orders;
 
-namespace Support.Agent.Api.Services;
+namespace Support.Operations.Services;
 
 public sealed class BusinessApiOrderClient
 {

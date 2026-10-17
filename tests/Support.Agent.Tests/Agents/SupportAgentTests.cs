@@ -1,8 +1,6 @@
 ﻿using System.Net;
 using Microsoft.Extensions.AI;
 using Support.Agent.Api.Agents;
-using Support.Agent.Api.Services;
-using Support.Agent.Api.Tools;
 using Support.Agent.Tests.TestHelpers;
 using Support.Operations.Services;
 using Support.Operations.Tools;

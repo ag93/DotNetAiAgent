@@ -1,8 +1,6 @@
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using Support.Agent.Api.Agents;
-using Support.Agent.Api.Services;
-using Support.Agent.Api.Tools;
 using Support.Operations.Services;
 using Support.Operations.Tools;
 
