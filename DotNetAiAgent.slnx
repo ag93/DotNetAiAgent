@@ -1,11 +1,11 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Support.Agent.Api/Support.Agent.Api.csproj" />
-    <Project Path="Support.Business.Api/Support.Business.Api.csproj" Id="bc0ac59f-c8e6-4433-8d4f-85755a0abe15" />
-    <Project Path="Support.Contracts/Support.Contracts.csproj" Id="7cb0c787-0b3c-4121-9c80-9ebd9592a605" />
+    <Project Path="src/Support.Business.Api/Support.Business.Api.csproj" Id="bc0ac59f-c8e6-4433-8d4f-85755a0abe15" />
+    <Project Path="src/Support.Contracts/Support.Contracts.csproj" Id="7cb0c787-0b3c-4121-9c80-9ebd9592a605" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="Support.Agent.Tests/Support.Agent.Tests.csproj" Id="aacddd29-be60-4556-a8f9-06e0145a4c88" />
-    <Project Path="Support.Business.Tests/Support.Business.Tests.csproj" Id="e6fc7fb6-088a-4754-8188-5cd6b2400541" />
+    <Project Path="tests/Support.Agent.Tests/Support.Agent.Tests.csproj" Id="aacddd29-be60-4556-a8f9-06e0145a4c88" />
+    <Project Path="tests/Support.Business.Tests/Support.Business.Tests.csproj" Id="e6fc7fb6-088a-4754-8188-5cd6b2400541" />
   </Folder>
 </Solution>
