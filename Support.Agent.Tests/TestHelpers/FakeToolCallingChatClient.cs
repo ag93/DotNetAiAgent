@@ -6,6 +6,16 @@ public sealed class FakeToolCallingChatClient : IChatClient
 {
     public int RequestCount { get; private set; }
     public bool ReceivedToolResult { get; private set; }
+    private readonly string _toolName;
+    private readonly string _argumentName;
+    private readonly string _argumentValue;
+
+    public FakeToolCallingChatClient(string toolName = "get_customer", string argumentName = "customerId", string argumentValue = "C-1002")
+    {
+        _toolName = toolName;
+        _argumentName = argumentName;
+        _argumentValue = argumentValue;
+    }
 
     public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
@@ -17,7 +27,7 @@ public sealed class FakeToolCallingChatClient : IChatClient
             // First response: pretend the model requests a tool.
             var tools = options?.Tools;
 
-            if (tools is null || !tools.Any(tool => tool.Name == "get_customer"))
+            if (tools is null || !tools.Any(tool => tool.Name == _toolName))
             {
                 throw new InvalidOperationException("The get_customer tool was not provided.");
             }
@@ -29,10 +39,10 @@ public sealed class FakeToolCallingChatClient : IChatClient
                         [
                             new FunctionCallContent(
                                 "call-1",
-                                "get_customer",
+                                _toolName,
                                 new Dictionary<string, object?>
                                 {
-                                    ["customerId"] = "C-1002"
+                                    [_argumentName] = _argumentValue
                                 })
                         ])));
         }

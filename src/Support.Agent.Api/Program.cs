@@ -26,7 +26,7 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
     });
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
-builder.Services.AddScoped<CustomerAgent>();
+builder.Services.AddScoped<SupportAgent>();
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<IChatClient>(_ =>
@@ -132,7 +132,7 @@ if (app.Environment.IsDevelopment())
     app.MapPost(
         "/api/agent/customer-chat",
         async (
-            CustomerChatRequest request, CustomerAgent agent, CancellationToken cancellationToken) =>
+            SupportChatRequest request, SupportAgent agent, CancellationToken cancellationToken) =>
             {
                 if (string.IsNullOrWhiteSpace(request.Message))
                 {
@@ -152,4 +152,4 @@ public partial class Program { }
 
 public sealed record ChatTestRequest(string Message);
 public sealed record ChatTestResponse(string? Reply);
-public sealed record CustomerChatRequest(string Message);
+public sealed record SupportChatRequest(string Message);
