@@ -27,6 +27,7 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
 builder.Services.AddScoped<SupportAgent>();
+builder.Services.AddScoped<McpSupportAgent>();
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<IChatClient>(_ =>
@@ -144,6 +145,26 @@ if (app.Environment.IsDevelopment())
                 return Results.Ok(result);
             });
 }
+
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapPost(
+        "/api/agent/mcp-chat",
+        async (
+            SupportChatRequest request, McpSupportAgent agent, CancellationToken cancellationToken) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Message))
+            {
+                return Results.BadRequest("A message is required.");
+            }
+
+            var result = await agent.AskAsync(request.Message, cancellationToken);
+
+            return Results.Ok(result);
+        });
+}
+
 
 
 app.Run();
