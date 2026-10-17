@@ -9,5 +9,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Support.Agent.Tests/Support.Agent.Tests.csproj" Id="aacddd29-be60-4556-a8f9-06e0145a4c88" />
     <Project Path="tests/Support.Business.Tests/Support.Business.Tests.csproj" Id="e6fc7fb6-088a-4754-8188-5cd6b2400541" />
+    <Project Path="tests/Support.Mcp.Tests/Support.Mcp.Tests.csproj" Id="70099113-a10a-43ac-8e56-e55434514744" />
   </Folder>
 </Solution>

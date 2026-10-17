@@ -9,9 +9,11 @@ namespace Support.Mcp.Server.Tools
     public sealed class OrderMcpTool
     {
         private readonly OrderLookupTool _orderLookupTool;
-        public OrderMcpTool(OrderLookupTool orderLookupTool)
+        private readonly ILogger<OrderMcpTool> _logger;
+        public OrderMcpTool(OrderLookupTool orderLookupTool, ILogger<OrderMcpTool> logger)
         {
             _orderLookupTool = orderLookupTool;
+            _logger = logger;
         }
 
         [McpServerTool(Name = "get_order")]
@@ -19,7 +21,9 @@ namespace Support.Mcp.Server.Tools
         public async Task<string> GetOrderAsync([Description("The order ID, such as O-2001.")] string orderId, 
             CancellationToken cancellationToken)
         {
+            _logger.LogInformation("MCP tool {ToolName} invoked", "get_order");
             var order = await _orderLookupTool.ExecuteAsync(orderId, cancellationToken);
+            _logger.LogInformation("MCP tool {ToolName} completed. Found: {Found}", "get_order", order is not null);
             if (order is null)
             {
                 return JsonSerializer.Serialize(new
