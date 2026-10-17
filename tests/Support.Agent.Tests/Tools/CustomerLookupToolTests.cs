@@ -1,7 +1,7 @@
 ﻿using System.Net;
-using Support.Agent.Api.Services;
-using Support.Agent.Api.Tools;
 using Support.Agent.Tests.TestHelpers;
+using Support.Operations.Services;
+using Support.Operations.Tools;
 
 namespace Support.Agent.Tests.Tools;
 

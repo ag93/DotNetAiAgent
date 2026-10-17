@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Support.Agent.Api\Support.Agent.Api.csproj" />
     <ProjectReference Include="..\..\src\Support.Contracts\Support.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Support.Operations\Support.Operations.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,6 +4,7 @@
     <Project Path="src/Support.Business.Api/Support.Business.Api.csproj" Id="bc0ac59f-c8e6-4433-8d4f-85755a0abe15" />
     <Project Path="src/Support.Contracts/Support.Contracts.csproj" Id="7cb0c787-0b3c-4121-9c80-9ebd9592a605" />
     <Project Path="src/Support.Mcp.Server/Support.Mcp.Server.csproj" Id="921d56b1-95d8-45e5-a2e9-2d2a7e98bc3b" />
+    <Project Path="src/Support.Operations/Support.Operations.csproj" Id="8e4f1e38-bdab-4c6c-a77c-78833b6d0208" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Support.Agent.Tests/Support.Agent.Tests.csproj" Id="aacddd29-be60-4556-a8f9-06e0145a4c88" />

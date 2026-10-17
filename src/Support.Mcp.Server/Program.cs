@@ -1,17 +1,31 @@
 using ModelContextProtocol.AspNetCore;
-using ModelContextProtocol.Server;
 using Support.Mcp.Server.Tools;
+using Support.Operations.Services;
+using Support.Operations.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpClient<BusinessApiCustomerClient>(
+    client =>
+    {
+        var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
+            ?? throw new InvalidOperationException(
+                "BusinessApi:BaseUrl is not configured.");
+
+        client.BaseAddress = new Uri(baseUrl);
+    });
+
+builder.Services.AddScoped<CustomerLookupTool>();
+
 
 builder.Services
     .AddMcpServer()
     .WithHttpTransport(options =>
     {
-        options.SessionMode =
-            HttpServerSessionMode.Stateless;
+        options.SessionMode = HttpServerSessionMode.Stateless;
     })
-    .WithTools<ServerInfoTool>();
+    .WithTools<ServerInfoTool>()
+    .WithTools<CustomerMcpTool>();
 
 var app = builder.Build();
 

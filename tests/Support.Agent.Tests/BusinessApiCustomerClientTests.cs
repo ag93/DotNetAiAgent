@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Text.Json;
-using Support.Agent.Api.Services;
 using Support.Agent.Tests.TestHelpers;
 using Support.Contracts.Customers;
+using Support.Operations.Services;
 
 namespace Support.Agent.Tests;
 

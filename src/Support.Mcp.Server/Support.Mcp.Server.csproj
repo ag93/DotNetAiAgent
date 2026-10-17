@@ -10,4 +10,8 @@
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Support.Operations\Support.Operations.csproj" />
+  </ItemGroup>
+
 </Project>
