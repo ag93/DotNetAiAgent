@@ -1,10 +1,11 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.AI;
+using Microsoft.Identity.Web;
+using Microsoft.OpenApi;
 using OllamaSharp;
 using Support.Agent.Api.Agents;
 using Support.Operations.Services;
 using Support.Operations.Tools;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Identity.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
@@ -19,7 +20,49 @@ builder.Services.AddAuthorization(options =>
     });
 });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(options =>
+{
+    var tenantId = builder.Configuration["AzureAd:TenantId"];
+    var agentApiClientId = builder.Configuration["AzureAd:ClientId"];
+
+    if (builder.Environment.IsDevelopment() 
+        & !string.IsNullOrWhiteSpace(tenantId) 
+        && !string.IsNullOrWhiteSpace(agentApiClientId))
+    {
+        var scope =
+            $"api://{agentApiClientId}/Agent.Invoke";
+
+        options.AddSecurityDefinition(
+            "EntraOAuth",
+            new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.OAuth2,
+                Flows = new OpenApiOAuthFlows
+                {
+                    AuthorizationCode = new OpenApiOAuthFlow
+                    {
+                        AuthorizationUrl = new Uri($"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize"),
+
+                        TokenUrl = new Uri($"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token"),
+
+                        Scopes = new Dictionary<string, string>
+                        {
+                            [scope] = "Invoke the support agent"
+                        }
+                    }
+                }
+            });
+
+        options.AddSecurityRequirement(document =>
+            new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference(
+                    "EntraOAuth", document)] = [scope]
+            });
+    }
+});
+
 builder.Services.AddHttpClient<BusinessApiCustomerClient>(
     client =>
     {
@@ -69,7 +112,19 @@ if (builder.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.UseSwagger();
-    app.UseSwaggerUI();
+
+    app.UseSwaggerUI(options =>
+    {
+        var swaggerClientId = builder.Configuration["SwaggerOAuth:ClientId"];
+
+        if (!string.IsNullOrWhiteSpace(swaggerClientId))
+        {
+            options.OAuthClientId(swaggerClientId);
+            options.OAuthUsePkce();
+            options.OAuthAppName("DotNetAiAgent Swagger");
+        }
+    });
+
 }
 
 
