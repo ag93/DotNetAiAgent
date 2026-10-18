@@ -45,16 +45,21 @@ public sealed class McpSupportAgent
         var allowedTools = discoveredTools.Where(tool => allowedNames.Contains(tool.Name)).ToList();
 
         var cache = new RequestToolResultCache<CallToolResult>();
+        var budget = new RequestToolCallBudget(maximumCalls: 4);
         async Task<CallToolResult> GetCustomerAsync(string customerId)
         {
             return await cache.GetOrAddAsync("get_customer", customerId,
-                () => mcpClient.CallToolAsync(
-                    "get_customer",
-                    new Dictionary<string, object?>
-                    {
-                        ["customerId"] = customerId.Trim()
-                    },
-                    cancellationToken: cancellationToken).AsTask(),
+                () =>
+                {
+                    budget.Consume();
+                    return mcpClient.CallToolAsync(
+                        "get_customer",
+                        new Dictionary<string, object?>
+                        {
+                            ["customerId"] = customerId.Trim()
+                        },
+                        cancellationToken: cancellationToken).AsTask();
+                },
                 result => result.IsError != true,
                 cancellationToken);
         }
@@ -62,13 +67,17 @@ public sealed class McpSupportAgent
         async Task<CallToolResult> GetOrderAsync(string orderId)
         {
             return await cache.GetOrAddAsync("get_order", orderId,
-                () => mcpClient.CallToolAsync(
-                    "get_order",
-                    new Dictionary<string, object?>
-                    {
-                        ["orderId"] = orderId.Trim()
-                    },
-                    cancellationToken: cancellationToken).AsTask(),
+                () => 
+                {
+                    budget.Consume();
+                    return mcpClient.CallToolAsync(
+                        "get_order",
+                        new Dictionary<string, object?>
+                        {
+                            ["orderId"] = orderId.Trim()
+                        },
+                        cancellationToken: cancellationToken).AsTask();
+                },
                 result => result.IsError != true,
                 cancellationToken);
         }
