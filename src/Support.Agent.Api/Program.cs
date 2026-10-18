@@ -3,8 +3,21 @@ using OllamaSharp;
 using Support.Agent.Api.Agents;
 using Support.Operations.Services;
 using Support.Operations.Tools;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Identity.Web;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AgentInvoke", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireScope("Agent.Invoke");
+    });
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient<BusinessApiCustomerClient>(
@@ -49,6 +62,8 @@ builder.Services.AddSingleton<IChatClient>(_ =>
 });
 
 var app = builder.Build();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseHttpsRedirection();
 if (builder.Environment.IsDevelopment())
 {
@@ -79,7 +94,7 @@ app.MapGet(
                     title: "Business API request failed.",
                     statusCode: StatusCodes.Status502BadGateway);
             }
-        });
+        }).RequireAuthorization("AgentInvoke");
 
 
 
@@ -104,7 +119,7 @@ app.MapGet(
                     title: "Business API request failed.",
                     statusCode: StatusCodes.Status502BadGateway);
             }
-        });
+        }).RequireAuthorization("AgentInvoke");
 
 
 app.MapPost(
@@ -125,7 +140,7 @@ app.MapPost(
             cancellationToken: cancellationToken);
 
         return Results.Ok(new ChatTestResponse(response.Text));
-    });
+    }).RequireAuthorization("AgentInvoke");
 
 
 if (app.Environment.IsDevelopment())
@@ -143,7 +158,7 @@ if (app.Environment.IsDevelopment())
                 var result = await agent.AskAsync(request.Message, cancellationToken);
 
                 return Results.Ok(result);
-            });
+            }).RequireAuthorization("AgentInvoke");
 }
 
 
@@ -162,7 +177,7 @@ if (app.Environment.IsDevelopment())
             var result = await agent.AskAsync(request.Message, cancellationToken);
 
             return Results.Ok(result);
-        });
+        }).RequireAuthorization("AgentInvoke");
 }
 
 
