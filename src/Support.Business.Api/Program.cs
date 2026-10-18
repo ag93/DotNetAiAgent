@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Identity.Web;
 using Support.Business.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,7 +8,23 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<CustomerService>();
 builder.Services.AddSingleton<OrderService>();
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("SupportRead", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireScope("Support.Read");
+    });
+});
+
 var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
@@ -26,7 +44,8 @@ app.MapGet(
 
         var customer = customerService.GetById(customerId);
         return customer is null ? Results.NotFound() : Results.Ok(customer);
-    });
+    })
+    .RequireAuthorization("SupportRead");
 
 
 app.MapGet(
@@ -38,7 +57,8 @@ app.MapGet(
 
         var order = orderService.GetById(orderId);
         return order is null ? Results.NotFound() : Results.Ok(order);
-    });
+    })
+    .RequireAuthorization("SupportRead");
 
 app.Run();
 

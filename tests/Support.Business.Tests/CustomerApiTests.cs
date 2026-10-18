@@ -2,15 +2,16 @@
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Support.Contracts.Customers;
+using Support.Business.Tests.TestHelpers;
 
 namespace Support.Business.Tests;
 
-public class CustomerApiTests : IClassFixture<WebApplicationFactory<Program>>
+public class CustomerApiTests : IClassFixture<AuthorizedBusinessApiFactory>
 {
     private readonly HttpClient _client;
-    public CustomerApiTests(WebApplicationFactory<Program> factory)
+    public CustomerApiTests(AuthorizedBusinessApiFactory factory)
     {
-        _client = factory.CreateClient();
+        _client = factory.CreateAuthorizedClient();
     }
 
     [Fact]

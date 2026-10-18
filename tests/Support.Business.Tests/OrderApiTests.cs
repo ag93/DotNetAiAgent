@@ -1,16 +1,17 @@
-﻿using System.Net;
-using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
+﻿using Microsoft.AspNetCore.Mvc.Testing;
+using Support.Business.Tests.TestHelpers;
 using Support.Contracts.Orders;
+using System.Net;
+using System.Net.Http.Json;
 
 namespace Support.Business.Tests;
 
-public class OrderApiTests : IClassFixture<WebApplicationFactory<Program>>
+public class OrderApiTests : IClassFixture<AuthorizedBusinessApiFactory>
 {
     private readonly HttpClient _client;
-    public OrderApiTests(WebApplicationFactory<Program> factory)
+    public OrderApiTests(AuthorizedBusinessApiFactory factory)
     {
-        _client = factory.CreateClient();
+        _client = factory.CreateAuthorizedClient();
     }
 
     [Fact]
