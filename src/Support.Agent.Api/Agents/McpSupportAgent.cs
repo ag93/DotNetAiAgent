@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 namespace Support.Agent.Api.Agents;
 
@@ -43,10 +44,62 @@ public sealed class McpSupportAgent
 
         var allowedTools = discoveredTools.Where(tool => allowedNames.Contains(tool.Name)).ToList();
 
+        var cache = new RequestToolResultCache<CallToolResult>();
+        async Task<CallToolResult> GetCustomerAsync(string customerId)
+        {
+            return await cache.GetOrAddAsync("get_customer", customerId,
+                () => mcpClient.CallToolAsync(
+                    "get_customer",
+                    new Dictionary<string, object?>
+                    {
+                        ["customerId"] = customerId.Trim()
+                    },
+                    cancellationToken: cancellationToken).AsTask(),
+                result => result.IsError != true,
+                cancellationToken);
+        }
+
+        async Task<CallToolResult> GetOrderAsync(string orderId)
+        {
+            return await cache.GetOrAddAsync("get_order", orderId,
+                () => mcpClient.CallToolAsync(
+                    "get_order",
+                    new Dictionary<string, object?>
+                    {
+                        ["orderId"] = orderId.Trim()
+                    },
+                    cancellationToken: cancellationToken).AsTask(),
+                result => result.IsError != true,
+                cancellationToken);
+        }
+
+        var executableTools = new List<AITool>();
+
+        foreach (var tool in allowedTools)
+        {
+            if (tool.Name == "get_customer")
+            {
+                executableTools.Add(
+                    AIFunctionFactory.Create(
+                        (Func<string, Task<CallToolResult>>)GetCustomerAsync,
+                        "get_customer",
+                        tool.Description));
+            }
+            else if (tool.Name == "get_order")
+            {
+                executableTools.Add(
+                    AIFunctionFactory.Create(
+                        (Func<string, Task<CallToolResult>>)GetOrderAsync,
+                        "get_order",
+                        tool.Description));
+            }
+        }
+
         var options = new ChatOptions
         {
-            Tools = [.. allowedTools]
+            Tools = executableTools
         };
+
 
         var messages = new List<ChatMessage>
         {
