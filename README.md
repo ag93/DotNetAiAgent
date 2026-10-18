@@ -8,6 +8,4 @@ Before running the solution, configure the relevant services:
 - **Support.Business.Api:** Microsoft Entra tenant and application IDs.
 - **Support.Mcp.Server:** Business API URL.
 
-Do not commit client secrets, access tokens, or other credentials. Use .NET User Secrets or environment variables for sensitive local configuration.
-
 The application requires access to appropriately configured Microsoft Entra app registrations for authenticated requests.
