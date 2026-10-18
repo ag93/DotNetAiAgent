@@ -96,4 +96,44 @@ public class McpLookupToolTests
 
         Assert.Equal("/api/orders/O-2001", handler.RequestedPath);
     }
+
+    [Fact]
+    public async Task GetCustomer_WhenBusinessApiFails_ThrowsHttpRequestException()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.InternalServerError);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://localhost/")
+        };
+
+        var lookupTool = new CustomerLookupTool(new BusinessApiCustomerClient(httpClient));
+
+        var mcpTool = new CustomerMcpTool(lookupTool, NullLogger<CustomerMcpTool>.Instance);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => mcpTool.GetCustomerAsync("C-1002", CancellationToken.None));
+
+        Assert.Equal("/api/customers/C-1002", handler.RequestedPath);
+    }
+
+    [Fact]
+    public async Task GetOrder_WhenIdIsBlank_ThrowsArgumentException()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://localhost/")
+        };
+
+        var lookupTool = new OrderLookupTool(new BusinessApiOrderClient(httpClient));
+
+        var mcpTool = new OrderMcpTool(lookupTool, NullLogger<OrderMcpTool>.Instance);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => mcpTool.GetOrderAsync("   ", CancellationToken.None));
+
+        // Validation must stop the request before HTTP is called.
+        Assert.Null(handler.RequestedPath);
+    }
+
 }

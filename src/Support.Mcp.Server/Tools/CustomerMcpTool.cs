@@ -2,6 +2,7 @@
 using System.Text.Json;
 using ModelContextProtocol.Server;
 using Support.Operations.Tools;
+using System.Diagnostics;
 
 namespace Support.Mcp.Server.Tools;
 
@@ -22,24 +23,54 @@ public sealed class CustomerMcpTool
     public async Task<string> GetCustomerAsync([Description("The customer ID, such as C-1002.")] string customerId,
         CancellationToken cancellationToken)
     {
+        var stopwatch = Stopwatch.StartNew();
         _logger.LogInformation("MCP tool {ToolName} invoked", "get_customer");
-        var customer = await _customerLookupTool.ExecuteAsync(customerId, cancellationToken);
 
-        _logger.LogInformation("MCP tool {ToolName} completed. Found: {Found}", "get_customer", customer is not null);
-
-        if (customer is null)
+        try
         {
+            var customer = await _customerLookupTool.ExecuteAsync(customerId, cancellationToken);
+
+            _logger.LogInformation(
+                "MCP tool {ToolName} completed. Found: {Found}. " +
+                "DurationMs: {DurationMs}",
+                "get_customer",
+            customer is not null,
+            stopwatch.ElapsedMilliseconds);
+
+            if (customer is null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    found = false,
+                    customerId
+                });
+            }
+
             return JsonSerializer.Serialize(new
             {
-                found = false,
-                customerId
+                found = true,
+                customer
             });
         }
-
-        return JsonSerializer.Serialize(new
+        catch (OperationCanceledException)
+        when (cancellationToken.IsCancellationRequested)
         {
-            found = true,
-            customer
-        });
+            _logger.LogInformation("MCP tool {ToolName} cancelled", "get_customer");
+            throw;
+        }
+        catch (ArgumentException)
+        {
+            _logger.LogWarning("MCP tool {ToolName} received invalid arguments", "get_customer");
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(
+                "MCP tool {ToolName} failed due to a downstream HTTP error. " +
+                "StatusCode: {StatusCode}",
+                "get_customer",
+                ex.StatusCode);
+            throw;
+        }
     }
 }

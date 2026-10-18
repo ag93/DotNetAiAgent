@@ -1,7 +1,8 @@
-﻿using System.ComponentModel;
-using System.Text.Json;
-using ModelContextProtocol.Server;
+﻿using ModelContextProtocol.Server;
 using Support.Operations.Tools;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Text.Json;
 
 namespace Support.Mcp.Server.Tools
 {
@@ -21,23 +22,54 @@ namespace Support.Mcp.Server.Tools
         public async Task<string> GetOrderAsync([Description("The order ID, such as O-2001.")] string orderId, 
             CancellationToken cancellationToken)
         {
+            var stopwatch = Stopwatch.StartNew();
             _logger.LogInformation("MCP tool {ToolName} invoked", "get_order");
-            var order = await _orderLookupTool.ExecuteAsync(orderId, cancellationToken);
-            _logger.LogInformation("MCP tool {ToolName} completed. Found: {Found}", "get_order", order is not null);
-            if (order is null)
+            try
             {
+                var order = await _orderLookupTool.ExecuteAsync(orderId, cancellationToken);
+
+                _logger.LogInformation(
+                            "MCP tool {ToolName} completed. Found: {Found}. " +
+                            "DurationMs: {DurationMs}",
+                            "get_order",
+                            order is not null,
+                            stopwatch.ElapsedMilliseconds);
+
+                if (order is null)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        found = false,
+                        orderId
+                    });
+                }
+
                 return JsonSerializer.Serialize(new
                 {
-                    found = false,
-                    orderId
+                    found = true,
+                    order
                 });
             }
-
-            return JsonSerializer.Serialize(new
+            catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
             {
-                found = true,
-                order
-            });
+                _logger.LogInformation("MCP tool {ToolName} cancelled", "get_order");
+                throw;
+            }
+            catch (ArgumentException)
+            {
+                _logger.LogWarning("MCP tool {ToolName} received invalid arguments", "get_order");
+                throw;
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(
+                    "MCP tool {ToolName} failed due to a downstream HTTP error. " +
+                    "StatusCode: {StatusCode}",
+                    "get_order",
+                    ex.StatusCode);
+                throw;
+            }
         }
     }
 }
