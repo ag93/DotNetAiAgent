@@ -4,13 +4,19 @@ using Microsoft.Identity.Web;
 using Microsoft.OpenApi;
 using OllamaSharp;
 using Support.Agent.Api.Agents;
+using Support.Agent.Api.Security;
 using Support.Operations.Services;
 using Support.Operations.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<BusinessApiOboHandler>();
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"))
+    .EnableTokenAcquisitionToCallDownstreamApi()
+    .AddInMemoryTokenCaches();
+
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AgentInvoke", policy =>
@@ -69,7 +75,8 @@ builder.Services.AddHttpClient<BusinessApiCustomerClient>(
         var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
             ?? throw new InvalidOperationException("BusinessApi:BaseUrl is not configured.");
         client.BaseAddress = new Uri(baseUrl);
-    });
+    })
+    .AddHttpMessageHandler<BusinessApiOboHandler>();
 
 builder.Services.AddHttpClient<BusinessApiOrderClient>(
     client =>
@@ -79,7 +86,8 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
                 "BusinessApi:BaseUrl is not configured.");
 
         client.BaseAddress = new Uri(baseUrl);
-    });
+    })
+    .AddHttpMessageHandler<BusinessApiOboHandler>();
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
 builder.Services.AddScoped<SupportAgent>();
