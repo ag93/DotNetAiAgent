@@ -4,6 +4,7 @@ using Microsoft.Identity.Web;
 using Microsoft.OpenApi;
 using OllamaSharp;
 using Support.Agent.Api.Agents;
+using Support.Agent.Api.ErrorHandling;
 using Support.Agent.Api.Security;
 using Support.Operations.Services;
 using Support.Operations.Tools;
@@ -112,7 +113,12 @@ builder.Services.AddSingleton<IChatClient>(_ =>
         .Build();
 });
 
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<DownstreamHttpExceptionHandler>();
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseHttpsRedirection();
