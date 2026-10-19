@@ -1,9 +1,26 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Identity.Web;
 using ModelContextProtocol.AspNetCore;
 using Support.Mcp.Server.Tools;
 using Support.Operations.Services;
 using Support.Operations.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("McpInvoke", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireScope("Mcp.Invoke");
+    });
+});
+
 
 builder.Services.AddHttpClient<BusinessApiCustomerClient>(
     client =>
@@ -40,8 +57,11 @@ builder.Services
     .WithTools<OrderMcpTool>();
 
 var app = builder.Build();
-
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
-app.MapMcp("/mcp");
+app.MapMcp("/mcp").RequireAuthorization("McpInvoke");
 
 app.Run();
+
+public partial class Program { }  
