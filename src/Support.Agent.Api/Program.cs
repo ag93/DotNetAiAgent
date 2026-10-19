@@ -227,20 +227,32 @@ if (app.Environment.IsDevelopment())
 
 if (app.Environment.IsDevelopment())
 {
+
     app.MapPost(
         "/api/agent/mcp-chat",
-        async (
-            SupportChatRequest request, McpSupportAgent agent, CancellationToken cancellationToken) =>
+        async (SupportChatRequest request, McpSupportAgent agent,
+            ITokenAcquisition tokenAcquisition, IConfiguration configuration,
+            HttpContext httpContext, CancellationToken cancellationToken) =>
         {
             if (string.IsNullOrWhiteSpace(request.Message))
             {
                 return Results.BadRequest("A message is required.");
             }
 
-            var result = await agent.AskAsync(request.Message, cancellationToken);
+            var scope = configuration["McpServer:Scope"];
+
+            if (string.IsNullOrWhiteSpace(scope))
+            {
+                throw new InvalidOperationException("McpServer:Scope is not configured.");
+            }
+
+            var mcpAccessToken = await tokenAcquisition.GetAccessTokenForUserAsync([scope], user: httpContext.User);
+            var result = await agent.AskAsync(request.Message, mcpAccessToken, cancellationToken);
 
             return Results.Ok(result);
-        }).RequireAuthorization("AgentInvoke");
+        })
+        .RequireAuthorization("AgentInvoke");
+
 }
 
 

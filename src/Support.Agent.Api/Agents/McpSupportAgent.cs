@@ -15,8 +15,13 @@ public sealed class McpSupportAgent
         _configuration = configuration;
     }
 
-    public async Task<McpSupportAgentResult> AskAsync(string message, CancellationToken cancellationToken = default)
+    public async Task<McpSupportAgentResult> AskAsync(string message, string mcpAccessToken, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(mcpAccessToken))
+        {
+            throw new ArgumentException("An MCP access token is required.", nameof(mcpAccessToken));
+        }
+
         if (string.IsNullOrWhiteSpace(message))
         {
             throw new ArgumentException("A message is required.", nameof(message));
@@ -28,7 +33,11 @@ public sealed class McpSupportAgent
         var transport = new HttpClientTransport(new HttpClientTransportOptions
             {
                 Endpoint = new Uri(endpoint),
-                TransportMode = HttpTransportMode.StreamableHttp
+                TransportMode = HttpTransportMode.StreamableHttp,
+                AdditionalHeaders = new Dictionary<string, string> 
+                {
+                    ["Authorization"] = $"Bearer {mcpAccessToken}"
+                }
             });
 
         await using var mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
