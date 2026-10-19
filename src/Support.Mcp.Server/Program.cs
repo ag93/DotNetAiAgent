@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using ModelContextProtocol.AspNetCore;
+using Support.Mcp.Server.Security;
 using Support.Mcp.Server.Tools;
 using Support.Operations.Services;
 using Support.Operations.Tools;
@@ -10,7 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"))
+    .EnableTokenAcquisitionToCallDownstreamApi()
+    .AddInMemoryTokenCaches();
 
 builder.Services.AddAuthorization(options =>
 {
@@ -21,7 +24,8 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<BusinessApiOboHandler>();
 builder.Services.AddHttpClient<BusinessApiCustomerClient>(
     client =>
     {
@@ -30,7 +34,13 @@ builder.Services.AddHttpClient<BusinessApiCustomerClient>(
                 "BusinessApi:BaseUrl is not configured.");
 
         client.BaseAddress = new Uri(baseUrl);
-    });
+    })
+    .AddHttpMessageHandler<BusinessApiOboHandler>()
+    .ConfigurePrimaryHttpMessageHandler(() =>
+        new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        });
 
 builder.Services.AddHttpClient<BusinessApiOrderClient>(
     client =>
@@ -40,7 +50,13 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
                 "BusinessApi:BaseUrl is not configured.");
 
         client.BaseAddress = new Uri(baseUrl);
-    });
+    })
+    .AddHttpMessageHandler<BusinessApiOboHandler>()
+    .ConfigurePrimaryHttpMessageHandler(() =>
+        new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        });
 
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
