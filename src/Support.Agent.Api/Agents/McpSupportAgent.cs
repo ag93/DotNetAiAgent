@@ -58,16 +58,17 @@ public sealed class McpSupportAgent
         async Task<CallToolResult> GetCustomerAsync(string customerId)
         {
             return await cache.GetOrAddAsync("get_customer", customerId,
-                () =>
+                async () =>
                 {
                     budget.Consume();
-                    return mcpClient.CallToolAsync(
+                    var result = await mcpClient.CallToolAsync(
                         "get_customer",
                         new Dictionary<string, object?>
                         {
                             ["customerId"] = customerId.Trim()
                         },
                         cancellationToken: cancellationToken).AsTask();
+                    return McpToolResultGuard.Sanitize(result);
                 },
                 result => result.IsError != true,
                 cancellationToken);
@@ -76,16 +77,17 @@ public sealed class McpSupportAgent
         async Task<CallToolResult> GetOrderAsync(string orderId)
         {
             return await cache.GetOrAddAsync("get_order", orderId,
-                () => 
+                async () => 
                 {
                     budget.Consume();
-                    return mcpClient.CallToolAsync(
+                    var result = await mcpClient.CallToolAsync(
                         "get_order",
                         new Dictionary<string, object?>
                         {
                             ["orderId"] = orderId.Trim()
                         },
                         cancellationToken: cancellationToken).AsTask();
+                    return McpToolResultGuard.Sanitize(result);
                 },
                 result => result.IsError != true,
                 cancellationToken);
@@ -129,7 +131,14 @@ public sealed class McpSupportAgent
                 "Never invent customer or order details. " +
                 "If a record is missing, say so. " +
                 "Do not claim an order was paid unless the " +
-                "tool result explicitly confirms payment."),
+                "tool result explicitly confirms payment." +
+                "When using customer or order lookup tools," +
+                "only report details explicitly returned by successful tool results." +
+                "If a lookup returns found: false, explain that the requested record was not found." +
+                "If a tool result indicates an error, explain that the lookup could not be completed" +
+                "and do not claim the record does not exist." +
+                "Never invent customer details, order statuses, payment confirmations," +
+                "or other information that has not been verified by the tools."),
 
             new(ChatRole.User, message)
         };
