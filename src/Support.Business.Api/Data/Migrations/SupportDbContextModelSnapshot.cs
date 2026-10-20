@@ -59,6 +59,53 @@ namespace Support.Business.Api.Data.Migrations
 
                     b.ToTable("Tickets", (string)null);
                 });
+
+            modelBuilder.Entity("Support.Business.Api.Data.Entities.TicketApprovalRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("RequestedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ReviewedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketId", "Status");
+
+                    b.ToTable("TicketApprovalRequests", (string)null);
+                });
+
+            modelBuilder.Entity("Support.Business.Api.Data.Entities.TicketApprovalRequest", b =>
+                {
+                    b.HasOne("Support.Business.Api.Data.Entities.SupportTicket", "Ticket")
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Ticket");
+                });
 #pragma warning restore 612, 618
         }
     }
