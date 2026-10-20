@@ -5,6 +5,7 @@ using Support.Mcp.Server.Security;
 using Support.Mcp.Server.Tools;
 using Support.Operations.Services;
 using Support.Operations.Tools;
+using Support.Mcp.Server.ErrorHandling;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,7 +73,11 @@ builder.Services
     .WithTools<CustomerMcpTool>()
     .WithTools<OrderMcpTool>();
 
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<DownstreamHttpExceptionHandler>();
+
 var app = builder.Build();
+app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
