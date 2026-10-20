@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Microsoft.OpenApi;
+using Support.Business.Api.Data;
 using Support.Business.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -61,6 +63,12 @@ builder.Services.AddAuthorization(options =>
         policy.RequireScope("Support.Read");
     });
 });
+
+
+var databaseDirectory = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
+Directory.CreateDirectory(databaseDirectory);
+var databasePath = Path.Combine(databaseDirectory, "support-tickets.db");
+builder.Services.AddDbContext<SupportDbContext>(options => options.UseSqlite($"Data Source={databasePath}"));
 
 var app = builder.Build();
 

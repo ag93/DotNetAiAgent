@@ -483,3 +483,9 @@ $RECYCLE.BIN/
 
 # Local development configuration for all projects
 **/appsettings.Development.json
+
+# Local SQLite data and journal files
+**/App_Data/*.db
+**/App_Data/*.db-shm
+**/App_Data/*.db-wal
+**/App_Data/*.db-journal
