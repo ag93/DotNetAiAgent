@@ -5,9 +5,12 @@ using Microsoft.OpenApi;
 using OllamaSharp;
 using Support.Agent.Api.Agents;
 using Support.Agent.Api.ErrorHandling;
+using Support.Agent.Api.Requests;
 using Support.Agent.Api.Security;
+using Support.Contracts.Tickets;
 using Support.Operations.Services;
 using Support.Operations.Tools;
+using System.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpContextAccessor();
@@ -70,36 +73,42 @@ builder.Services.AddSwaggerGen(options =>
     }
 });
 
+var businessApiBaseUrl = builder.Configuration["BusinessApi:BaseUrl"]
+    ?? throw new InvalidOperationException("BusinessApi:BaseUrl is not configured.");
+
 builder.Services.AddHttpClient<BusinessApiCustomerClient>(
     client =>
     {
-        var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
-            ?? throw new InvalidOperationException("BusinessApi:BaseUrl is not configured.");
-        client.BaseAddress = new Uri(baseUrl);
+        client.BaseAddress = new Uri(businessApiBaseUrl);
     })
     .AddHttpMessageHandler<BusinessApiOboHandler>();
 
 builder.Services.AddHttpClient<BusinessApiOrderClient>(
     client =>
     {
-        var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
-            ?? throw new InvalidOperationException(
-                "BusinessApi:BaseUrl is not configured.");
-
-        client.BaseAddress = new Uri(baseUrl);
+        client.BaseAddress = new Uri(businessApiBaseUrl);
     })
     .AddHttpMessageHandler<BusinessApiOboHandler>();
 
 builder.Services.AddHttpClient<BusinessApiTicketClient>(
     client =>
     {
-        var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
-            ?? throw new InvalidOperationException(
-                "BusinessApi:BaseUrl is not configured.");
-
-        client.BaseAddress = new Uri(baseUrl);
+        client.BaseAddress = new Uri(businessApiBaseUrl);
     })
     .AddHttpMessageHandler<BusinessApiOboHandler>();
+
+builder.Services.AddHttpClient("BusinessTicketWrites", 
+    client =>
+    {
+        client.BaseAddress = new Uri(businessApiBaseUrl);
+    })
+    .ConfigurePrimaryHttpMessageHandler(() =>
+        new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        });
+
+
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
 builder.Services.AddScoped<TicketLookupTool>();
@@ -273,12 +282,106 @@ if (app.Environment.IsDevelopment())
 
 }
 
+if (app.Environment.IsDevelopment())
+{
+
+    app.MapPost("/api/agent/tickets", async (
+        ConfirmedTicketCreateRequest request,
+        ITokenAcquisition tokenAcquisition,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        HttpContext httpContext,
+        CancellationToken cancellationToken) =>
+    {
+        var ticket = request.Ticket;
+
+        if (ticket is null ||
+            string.IsNullOrWhiteSpace(ticket.CustomerId) ||
+            ticket.CustomerId.Trim().Length > 40 ||
+            (ticket.OrderId?.Trim().Length ?? 0) > 40 ||
+            string.IsNullOrWhiteSpace(ticket.Subject) ||
+            ticket.Subject.Trim().Length > 200 ||
+            string.IsNullOrWhiteSpace(ticket.Description) ||
+            ticket.Description.Trim().Length > 4000)
+        {
+            return Results.BadRequest(new
+            {
+                error = "Invalid ticket details."
+            });
+        }
+
+        var normalizedTicket = new CreateTicketRequest(
+            ticket.CustomerId.Trim(),
+            string.IsNullOrWhiteSpace(ticket.OrderId) ? null : ticket.OrderId.Trim(),
+            ticket.Subject.Trim(),
+            ticket.Description.Trim());
+
+        // Preview only. No token acquisition or database write.
+        if (!request.Confirmed)
+        {
+            return Results.Ok(new
+            {
+                requiresConfirmation = true,
+                proposedTicket = normalizedTicket,
+                message = "Review the details and explicitly confirm creation."
+            });
+        }
+
+        var scope = configuration["BusinessApi:CreateTicketScope"];
+
+        if (string.IsNullOrWhiteSpace(scope))
+        {
+            throw new InvalidOperationException(
+                "BusinessApi:CreateTicketScope is not configured.");
+        }
+
+        var accessToken =
+            await tokenAcquisition.GetAccessTokenForUserAsync(
+                [scope],
+                user: httpContext.User);
+
+        var client =
+            httpClientFactory.CreateClient("BusinessTicketWrites");
+
+        using var outboundRequest =
+            new HttpRequestMessage(HttpMethod.Post, "api/tickets")
+            {
+                Content = JsonContent.Create(normalizedTicket)
+            };
+
+        outboundRequest.Headers.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        using var response = await client.SendAsync(
+            outboundRequest,
+            cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        var created = await response.Content
+            .ReadFromJsonAsync<TicketResponse>(
+                cancellationToken);
+
+        if (created is null)
+        {
+            throw new HttpRequestException(
+                "The downstream service returned an empty ticket response.");
+        }
+
+        return Results.Ok(new
+        {
+            created = true,
+            ticket = created
+        });
+    })
+    .RequireAuthorization("AgentInvoke");
+}
 
 
 app.Run();
 
 public partial class Program { }
 
-public sealed record ChatTestRequest(string Message);
 public sealed record ChatTestResponse(string? Reply);
-public sealed record SupportChatRequest(string Message);
