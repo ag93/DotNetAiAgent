@@ -48,7 +48,8 @@ public sealed class McpSupportAgent
         var allowedNames = new HashSet<string>(StringComparer.Ordinal)
         {
             "get_customer",
-            "get_order"
+            "get_order",
+            "get_ticket"
         };
 
         var allowedTools = discoveredTools.Where(tool => allowedNames.Contains(tool.Name)).ToList();
@@ -93,6 +94,27 @@ public sealed class McpSupportAgent
                 cancellationToken);
         }
 
+
+        async Task<CallToolResult> GetTicketAsync(string ticketId)
+        {
+            return await cache.GetOrAddAsync("get_ticket", ticketId,
+                async () =>
+                {
+                    budget.Consume();
+                    var result = await mcpClient.CallToolAsync(
+                        "get_ticket",
+                        new Dictionary<string, object?>
+                        {
+                            ["ticketId"] = ticketId.Trim()
+                        },
+                        cancellationToken: cancellationToken);
+                    return McpToolResultGuard.Sanitize(result);
+                },
+                result => result.IsError != true,
+                cancellationToken);
+        }
+
+
         var executableTools = new List<AITool>();
 
         foreach (var tool in allowedTools)
@@ -113,6 +135,14 @@ public sealed class McpSupportAgent
                         "get_order",
                         tool.Description));
             }
+            else if (tool.Name == "get_ticket")
+            {
+                executableTools.Add(AIFunctionFactory.Create(
+                    (Func<string, Task<CallToolResult>>)GetTicketAsync,
+                    "get_ticket",
+                    tool.Description));
+            }
+
         }
 
         var options = new ChatOptions
@@ -138,7 +168,12 @@ public sealed class McpSupportAgent
                 "If a tool result indicates an error, explain that the lookup could not be completed" +
                 "and do not claim the record does not exist." +
                 "Never invent customer details, order statuses, payment confirmations," +
-                "or other information that has not been verified by the tools."),
+                "or other information that has not been verified by the tools." +
+                "Use `get_ticket` when the user asks about an existing support ticket and provides its ticket ID. " +
+                "Report only the ticket fields returned by the successful lookup. If the ticket was not found, say so. " +
+                "If the lookup failed, explain that its status could not be verified. " +
+                "Do not invent ticket IDs, statuses, updates, or approval decisions. " +
+                "`get_ticket` is read-only; never claim to create, update, resolve, or close tickets through this tool."),
 
             new(ChatRole.User, message)
         };

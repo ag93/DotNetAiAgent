@@ -89,8 +89,20 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
         client.BaseAddress = new Uri(baseUrl);
     })
     .AddHttpMessageHandler<BusinessApiOboHandler>();
+
+builder.Services.AddHttpClient<BusinessApiTicketClient>(
+    client =>
+    {
+        var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
+            ?? throw new InvalidOperationException(
+                "BusinessApi:BaseUrl is not configured.");
+
+        client.BaseAddress = new Uri(baseUrl);
+    })
+    .AddHttpMessageHandler<BusinessApiOboHandler>();
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
+builder.Services.AddScoped<TicketLookupTool>();
 builder.Services.AddScoped<SupportAgent>();
 builder.Services.AddScoped<McpSupportAgent>();
 builder.Services.AddOpenApi();

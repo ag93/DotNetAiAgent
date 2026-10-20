@@ -8,12 +8,18 @@ public sealed class SupportAgent
     private readonly IChatClient _chatClient;
     private readonly CustomerLookupTool _customerTool;
     private readonly OrderLookupTool _orderTool;
+    private readonly TicketLookupTool _ticketLookupTool;
 
-    public SupportAgent(IChatClient chatClient, CustomerLookupTool customerTool, OrderLookupTool orderTool)
+    public SupportAgent(
+        IChatClient chatClient,
+        CustomerLookupTool customerTool,
+        OrderLookupTool orderTool,
+        TicketLookupTool ticketLookupTool)
     {
         _chatClient = chatClient;
         _customerTool = customerTool;
         _orderTool = orderTool;
+        _ticketLookupTool = ticketLookupTool;
     }
 
     public async Task<SupportAgentResult> AskAsync(string message, CancellationToken cancellationToken = default)
@@ -43,6 +49,16 @@ public sealed class SupportAgent
                 : new { found = true, order };
         }
 
+        async Task<object> GetTicketAsync(string ticketId)
+        {
+            invokedTools.Add("get_ticket");
+            var ticket = await _ticketLookupTool.GetTicketAsync(ticketId, cancellationToken);
+
+            return ticket is null
+                ? new { found = false, ticketId }
+                : new { found = true, ticket };
+        }
+
         var options = new ChatOptions
         {
             Tools =
@@ -55,7 +71,14 @@ public sealed class SupportAgent
                 AIFunctionFactory.Create(
                     (Func<string, Task<object>>)GetOrderAsync,
                     "get_order",
-                    "Look up an order by order ID.")
+                    "Look up an order by order ID."),
+
+                AIFunctionFactory.Create(
+                    (Func<string, Task<object>>)GetTicketAsync,
+                    "get_ticket",
+                    "Retrieve an existing support ticket by its GUID. " +
+                    "Use this to check a ticket's status or details. " +
+                    "This tool does not create or modify tickets."),
             ]
         };
 
@@ -64,10 +87,24 @@ public sealed class SupportAgent
             new(
                 ChatRole.System,
                 "You are a customer support assistant. " +
-                "Use get_customer for customer record questions. " +
-                "Use get_order for order record questions. " +
-                "Never invent customer or order information. " +
-                "If a requested record is not found, say so."),
+                "Use get_customer for customer record questions " +
+                "and get_order for order record questions. " +
+                "Never invent customer or order details. " +
+                "If a record is missing, say so. " +
+                "Do not claim an order was paid unless the " +
+                "tool result explicitly confirms payment." +
+                "When using customer or order lookup tools," +
+                "only report details explicitly returned by successful tool results." +
+                "If a lookup returns found: false, explain that the requested record was not found." +
+                "If a tool result indicates an error, explain that the lookup could not be completed" +
+                "and do not claim the record does not exist." +
+                "Never invent customer details, order statuses, payment confirmations," +
+                "or other information that has not been verified by the tools." +
+                "Use `get_ticket` when the user asks about an existing support ticket and provides its ticket ID. " +
+                "Report only the ticket fields returned by the successful lookup. If the ticket was not found, say so. " +
+                "If the lookup failed, explain that its status could not be verified. " +
+                "Do not invent ticket IDs, statuses, updates, or approval decisions. " +
+                "`get_ticket` is read-only; never claim to create, update, resolve, or close tickets through this tool."),
 
             new(ChatRole.User, message)
         };

@@ -31,8 +31,7 @@ builder.Services.AddHttpClient<BusinessApiCustomerClient>(
     client =>
     {
         var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
-            ?? throw new InvalidOperationException(
-                "BusinessApi:BaseUrl is not configured.");
+            ?? throw new InvalidOperationException("BusinessApi:BaseUrl is not configured.");
 
         client.BaseAddress = new Uri(baseUrl);
     })
@@ -46,11 +45,19 @@ builder.Services.AddHttpClient<BusinessApiCustomerClient>(
 builder.Services.AddHttpClient<BusinessApiOrderClient>(
     client =>
     {
-        var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
-            ?? throw new InvalidOperationException(
-                "BusinessApi:BaseUrl is not configured.");
+        client.BaseAddress = new Uri(builder.Configuration["BusinessApi:BaseUrl"]!);
+    })
+    .AddHttpMessageHandler<BusinessApiOboHandler>()
+    .ConfigurePrimaryHttpMessageHandler(() =>
+        new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        });
 
-        client.BaseAddress = new Uri(baseUrl);
+builder.Services
+    .AddHttpClient<BusinessApiTicketClient>(client =>
+    {
+        client.BaseAddress = new Uri(builder.Configuration["BusinessApi:BaseUrl"]!);
     })
     .AddHttpMessageHandler<BusinessApiOboHandler>()
     .ConfigurePrimaryHttpMessageHandler(() =>
@@ -61,6 +68,7 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
 
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
+builder.Services.AddScoped<TicketLookupTool>();
 
 
 builder.Services
@@ -71,7 +79,8 @@ builder.Services
     })
     .WithTools<ServerInfoTool>()
     .WithTools<CustomerMcpTool>()
-    .WithTools<OrderMcpTool>();
+    .WithTools<OrderMcpTool>()
+    .WithTools<TicketMcpTool>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DownstreamHttpExceptionHandler>();

@@ -31,11 +31,17 @@ public class SupportAgentTests
             BaseAddress = new Uri("https://localhost/")
         };
 
+        using var ticketLookupHttp = new HttpClient(new FakeHttpMessageHandler(HttpStatusCode.NotFound))
+        {
+            BaseAddress = new Uri("https://localhost/")
+        };
+
         var customerTool = new CustomerLookupTool(new BusinessApiCustomerClient(customerHttp));
         var orderTool = new OrderLookupTool(new BusinessApiOrderClient(orderHttp));
+        var ticketLookupTool = new TicketLookupTool(new BusinessApiTicketClient(ticketLookupHttp));
         using var fakeModel = new FakeToolCallingChatClient(); //Defaults to use customer lookup tool
         using var chatClient = new ChatClientBuilder(fakeModel).UseFunctionInvocation().Build();
-        var agent = new SupportAgent(chatClient, customerTool, orderTool);
+        var agent = new SupportAgent(chatClient, customerTool, orderTool, ticketLookupTool);
 
         // Act
         var result = await agent.AskAsync("Look up customer C-1002.");
@@ -71,8 +77,14 @@ public class SupportAgentTests
             BaseAddress = new Uri("https://localhost/")
         };
 
+        using var ticketHttp = new HttpClient(new FakeHttpMessageHandler(HttpStatusCode.OK, orderJson))
+        {
+            BaseAddress = new Uri("https://localhost/")
+        };
+
         var customerTool = new CustomerLookupTool(new BusinessApiCustomerClient(customerHttp));
         var orderTool = new OrderLookupTool(new BusinessApiOrderClient(orderHttp));
+        var ticketTool = new TicketLookupTool(new BusinessApiTicketClient(ticketHttp));
 
         using var fakeModel = new FakeToolCallingChatClient(toolName: "get_order", argumentName: "orderId", argumentValue: "O-2001");
 
@@ -80,7 +92,7 @@ public class SupportAgentTests
             .UseFunctionInvocation()
             .Build();
 
-        var agent = new SupportAgent(chatClient, customerTool, orderTool);
+        var agent = new SupportAgent(chatClient, customerTool, orderTool, ticketTool);
 
         // Act
         var result = await agent.AskAsync("What is the status of order O-2001?");
