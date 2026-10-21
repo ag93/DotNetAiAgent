@@ -35,13 +35,19 @@ public class SupportAgentTests
         {
             BaseAddress = new Uri("https://localhost/")
         };
+        using var approvalLookupHttp = new HttpClient(new FakeHttpMessageHandler(HttpStatusCode.NotFound))
+        {
+            BaseAddress = new Uri("https://localhost/")
+        };
 
         var customerTool = new CustomerLookupTool(new BusinessApiCustomerClient(customerHttp));
         var orderTool = new OrderLookupTool(new BusinessApiOrderClient(orderHttp));
         var ticketLookupTool = new TicketLookupTool(new BusinessApiTicketClient(ticketLookupHttp));
+        var approvalLookupTool = new ApprovalLookupTool(new BusinessApiApprovalClient(approvalLookupHttp));
+
         using var fakeModel = new FakeToolCallingChatClient(); //Defaults to use customer lookup tool
         using var chatClient = new ChatClientBuilder(fakeModel).UseFunctionInvocation().Build();
-        var agent = new SupportAgent(chatClient, customerTool, orderTool, ticketLookupTool);
+        var agent = new SupportAgent(chatClient, customerTool, orderTool, ticketLookupTool, approvalLookupTool);
 
         // Act
         var result = await agent.AskAsync("Look up customer C-1002.");
@@ -81,10 +87,15 @@ public class SupportAgentTests
         {
             BaseAddress = new Uri("https://localhost/")
         };
+        using var approvalLookupHttp = new HttpClient(new FakeHttpMessageHandler(HttpStatusCode.NotFound))
+        {
+            BaseAddress = new Uri("https://localhost/")
+        };
 
         var customerTool = new CustomerLookupTool(new BusinessApiCustomerClient(customerHttp));
         var orderTool = new OrderLookupTool(new BusinessApiOrderClient(orderHttp));
         var ticketTool = new TicketLookupTool(new BusinessApiTicketClient(ticketHttp));
+        var approvalLookupTool = new ApprovalLookupTool(new BusinessApiApprovalClient(approvalLookupHttp));
 
         using var fakeModel = new FakeToolCallingChatClient(toolName: "get_order", argumentName: "orderId", argumentValue: "O-2001");
 
@@ -92,7 +103,7 @@ public class SupportAgentTests
             .UseFunctionInvocation()
             .Build();
 
-        var agent = new SupportAgent(chatClient, customerTool, orderTool, ticketTool);
+        var agent = new SupportAgent(chatClient, customerTool, orderTool, ticketTool, approvalLookupTool);
 
         // Act
         var result = await agent.AskAsync("What is the status of order O-2001?");

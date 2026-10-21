@@ -25,15 +25,16 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
+var businessApiBaseUrl = builder.Configuration["BusinessApi:BaseUrl"]
+            ?? throw new InvalidOperationException("BusinessApi:BaseUrl is not configured.");
+var businessApiBaseUri = new Uri(businessApiBaseUrl);
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<BusinessApiOboHandler>();
 builder.Services.AddHttpClient<BusinessApiCustomerClient>(
     client =>
     {
-        var baseUrl = builder.Configuration["BusinessApi:BaseUrl"]
-            ?? throw new InvalidOperationException("BusinessApi:BaseUrl is not configured.");
-
-        client.BaseAddress = new Uri(baseUrl);
+        client.BaseAddress = businessApiBaseUri;
     })
     .AddHttpMessageHandler<BusinessApiOboHandler>()
     .ConfigurePrimaryHttpMessageHandler(() =>
@@ -45,7 +46,7 @@ builder.Services.AddHttpClient<BusinessApiCustomerClient>(
 builder.Services.AddHttpClient<BusinessApiOrderClient>(
     client =>
     {
-        client.BaseAddress = new Uri(builder.Configuration["BusinessApi:BaseUrl"]!);
+        client.BaseAddress = businessApiBaseUri;
     })
     .AddHttpMessageHandler<BusinessApiOboHandler>()
     .ConfigurePrimaryHttpMessageHandler(() =>
@@ -57,7 +58,19 @@ builder.Services.AddHttpClient<BusinessApiOrderClient>(
 builder.Services
     .AddHttpClient<BusinessApiTicketClient>(client =>
     {
-        client.BaseAddress = new Uri(builder.Configuration["BusinessApi:BaseUrl"]!);
+        client.BaseAddress = businessApiBaseUri;
+    })
+    .AddHttpMessageHandler<BusinessApiOboHandler>()
+    .ConfigurePrimaryHttpMessageHandler(() =>
+        new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        });
+
+builder.Services
+    .AddHttpClient<BusinessApiApprovalClient>(client =>
+    {
+        client.BaseAddress = businessApiBaseUri;
     })
     .AddHttpMessageHandler<BusinessApiOboHandler>()
     .ConfigurePrimaryHttpMessageHandler(() =>
@@ -69,6 +82,7 @@ builder.Services
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
 builder.Services.AddScoped<TicketLookupTool>();
+builder.Services.AddTransient<ApprovalLookupTool>();
 
 
 builder.Services
@@ -80,7 +94,8 @@ builder.Services
     .WithTools<ServerInfoTool>()
     .WithTools<CustomerMcpTool>()
     .WithTools<OrderMcpTool>()
-    .WithTools<TicketMcpTool>();
+    .WithTools<TicketMcpTool>()
+    .WithTools<ApprovalMcpTool>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DownstreamHttpExceptionHandler>();

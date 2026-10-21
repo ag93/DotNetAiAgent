@@ -110,10 +110,22 @@ builder.Services.AddHttpClient("BusinessTicketWrites",
             AllowAutoRedirect = false
         });
 
+builder.Services
+    .AddHttpClient<BusinessApiApprovalClient>(client =>
+    {
+        client.BaseAddress = new Uri(businessApiBaseUrl);
+    })
+    .AddHttpMessageHandler<BusinessApiOboHandler>()
+    .ConfigurePrimaryHttpMessageHandler(() =>
+        new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        });
 
 builder.Services.AddScoped<CustomerLookupTool>();
 builder.Services.AddScoped<OrderLookupTool>();
 builder.Services.AddScoped<TicketLookupTool>();
+builder.Services.AddTransient<ApprovalLookupTool>();
 builder.Services.AddScoped<SupportAgent>();
 builder.Services.AddScoped<McpSupportAgent>();
 builder.Services.AddOpenApi();
