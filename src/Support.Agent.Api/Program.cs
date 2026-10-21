@@ -7,9 +7,11 @@ using Support.Agent.Api.Agents;
 using Support.Agent.Api.ErrorHandling;
 using Support.Agent.Api.Requests;
 using Support.Agent.Api.Security;
+using Support.Contracts.Approvals;
 using Support.Contracts.Tickets;
 using Support.Operations.Services;
 using Support.Operations.Tools;
+using System.Net;
 using System.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -464,6 +466,121 @@ if (app.Environment.IsDevelopment())
     })
     .RequireAuthorization("AgentInvoke");
 }
+
+
+app.MapPost("/api/agent/resolution-requests", async (
+    ConfirmedResolutionRequest request,
+    ITokenAcquisition tokenAcquisition,
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var reason = request.Reason?.Trim();
+
+    if (request.TicketId == Guid.Empty ||
+        string.IsNullOrWhiteSpace(reason) ||
+        reason.Length > 1000)
+    {
+        return Results.BadRequest(new
+        {
+            error =
+                "A valid ticket ID and a resolution reason " +
+                "of at most 1000 characters are required."
+        });
+    }
+
+    // Preview only: no OBO token and no downstream write.
+    if (!request.Confirmed)
+    {
+        return Results.Ok(new
+        {
+            requiresConfirmation = true,
+            ticketId = request.TicketId,
+            proposedReason = reason,
+            message =
+                "Review the proposal before submitting " +
+                "it for human approval."
+        });
+    }
+
+    var scope =
+        configuration["BusinessApi:ResolutionRequestScope"];
+
+    if (string.IsNullOrWhiteSpace(scope))
+    {
+        throw new InvalidOperationException(
+            "BusinessApi:ResolutionRequestScope is not configured.");
+    }
+
+    var accessToken =
+        await tokenAcquisition.GetAccessTokenForUserAsync(
+            [scope],
+            user: httpContext.User);
+
+    var client = httpClientFactory.CreateClient(
+        "BusinessTicketWrites");
+
+    using var outboundRequest = new HttpRequestMessage(
+        HttpMethod.Post,
+        $"api/tickets/{request.TicketId:D}/resolution-requests")
+    {
+        Content = JsonContent.Create(
+            new CreateResolutionApprovalRequest(reason))
+    };
+
+    outboundRequest.Headers.Authorization =
+        new AuthenticationHeaderValue(
+            "Bearer",
+            accessToken);
+
+    using var response = await client.SendAsync(
+        outboundRequest,
+        cancellationToken);
+
+    // Preserve expected domain results from the Business API.
+    if (response.StatusCode == HttpStatusCode.NotFound)
+    {
+        return Results.NotFound(new
+        {
+            error = "Ticket not found."
+        });
+    }
+
+    if (response.StatusCode == HttpStatusCode.Conflict)
+    {
+        return Results.Conflict(new
+        {
+            error =
+                "The ticket cannot accept another pending " +
+                "resolution request."
+        });
+    }
+
+    response.EnsureSuccessStatusCode();
+
+    var approval = await response.Content
+        .ReadFromJsonAsync<TicketApprovalResponse>(
+            cancellationToken);
+
+    if (approval is null)
+    {
+        throw new HttpRequestException(
+            "The downstream service returned an empty approval response.");
+    }
+
+    return Results.Ok(new
+    {
+        submitted = true,
+        approval,
+        message =
+            "Resolution proposal submitted. " +
+            "The ticket has not been resolved and is " +
+            "awaiting independent human review."
+    });
+})
+.RequireAuthorization("AgentInvoke");
+
 
 app.Run();
 
