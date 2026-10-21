@@ -5,6 +5,7 @@ using Microsoft.OpenApi;
 using Support.Business.Api.Approvals;
 using Support.Business.Api.Data;
 using Support.Business.Api.Data.Entities;
+using Support.Business.Api.Security;
 using Support.Business.Api.Services;
 using Support.Business.Api.Tickets;
 using Support.Contracts.Approvals;
@@ -27,6 +28,7 @@ builder.Services.AddSwaggerGen(options =>
         var supportReadScope = $"api://{businessApiClientId}/Support.Read";
         var ticketsCreateScope = $"api://{businessApiClientId}/Tickets.Create";
         var ticketsApprovalRequestScope = $"api://{businessApiClientId}/Tickets.Approval.Request";
+        var ticketsApprovalReviewScope = $"api://{businessApiClientId}/Tickets.Approval.Review";
 
         options.AddSecurityDefinition("EntraOAuth", new OpenApiSecurityScheme
             {
@@ -43,7 +45,8 @@ builder.Services.AddSwaggerGen(options =>
                         {
                             [supportReadScope] = "Read support records",
                             [ticketsCreateScope] = "Create support tickets",
-                            [ticketsApprovalRequestScope] = "Submit ticket resolution approval requests"
+                            [ticketsApprovalRequestScope] = "Submit ticket resolution approval requests",
+                            [ticketsApprovalReviewScope] = "Review pending ticket resolution requests"
                         }
                     }
                 }
@@ -52,8 +55,8 @@ builder.Services.AddSwaggerGen(options =>
         options.AddSecurityRequirement(document =>
             new OpenApiSecurityRequirement
             {
-                [new OpenApiSecuritySchemeReference(
-                    "EntraOAuth", document)] = [supportReadScope, ticketsCreateScope]
+                [new OpenApiSecuritySchemeReference("EntraOAuth", document)] 
+                    =  [supportReadScope, ticketsCreateScope, ticketsApprovalReviewScope, ticketsApprovalRequestScope]
             });
     }
 });
@@ -83,6 +86,13 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser();
         policy.RequireScope("Tickets.Approval.Request");
     });
+
+    options.AddPolicy("TicketsApprovalReview", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireScope("Tickets.Approval.Review");
+    });
+
 });
 
 
@@ -217,6 +227,7 @@ app.MapPost(
         Guid ticketId,
         CreateResolutionApprovalRequest request,
         SupportDbContext db,
+        HttpContext httpContext,
         CancellationToken cancellationToken) =>
     {
         var reason = request.Reason?.Trim();
@@ -266,6 +277,13 @@ app.MapPost(
             });
         }
 
+        var requesterId = ApprovalUserIdentity.GetObjectId(httpContext.User);
+
+        if (requesterId is null)
+        {
+            return Results.Forbid();
+        }
+
         var approval = new TicketApprovalRequest
         {
             TicketId = ticketId,
@@ -273,7 +291,8 @@ app.MapPost(
             Status = ApprovalStatus.Pending,
             RequestedAtUtc = DateTimeOffset.UtcNow,
             ReviewedAtUtc = null,
-            ReviewedBy = null
+            ReviewedBy = null,
+            RequestedBy = requesterId
         };
 
         db.TicketApprovalRequests.Add(approval);
@@ -302,7 +321,82 @@ app.MapGet("/api/approvals/{id:guid}", async (
         ? Results.NotFound()
         : Results.Ok(approval.ToResponse());
 })
-.RequireAuthorization("SupportRead");
+.RequireAuthorization(["SupportRead"]);
+
+
+app.MapPost("/api/approvals/{id:guid}/review", async (
+    Guid id,
+    ReviewResolutionApprovalRequest request,
+    SupportDbContext db,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var decision = request.Decision?.Trim();
+
+    if (decision is not ("Approved" or "Rejected"))
+    {
+        return Results.BadRequest(new
+        {
+            error = "Decision must be Approved or Rejected."
+        });
+    }
+
+    var approval = await db.TicketApprovalRequests
+        .FirstOrDefaultAsync(
+            a => a.Id == id,
+            cancellationToken);
+
+    if (approval is null)
+    {
+        return Results.NotFound();
+    }
+
+    if (approval.Status != ApprovalStatus.Pending)
+    {
+        return Results.Conflict(new
+        {
+            error = "This approval request has already been reviewed."
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(approval.RequestedBy))
+    {
+        return Results.Conflict(new
+        {
+            error =
+                "This request predates requester identity tracking. " +
+                "Submit a new resolution request."
+        });
+    }
+
+    var reviewerId =
+        ApprovalUserIdentity.GetObjectId(httpContext.User);
+
+    if (reviewerId is null)
+    {
+        return Results.Forbid();
+    }
+
+    if (string.Equals(
+        approval.RequestedBy,
+        reviewerId,
+        StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.Forbid();
+    }
+
+    approval.Status = decision == "Approved"
+        ? ApprovalStatus.Approved
+        : ApprovalStatus.Rejected;
+
+    approval.ReviewedAtUtc = DateTimeOffset.UtcNow;
+    approval.ReviewedBy = reviewerId;
+
+    await db.SaveChangesAsync(cancellationToken);
+
+    return Results.Ok(approval.ToResponse());
+})
+.RequireAuthorization("TicketsApprovalReview");
 
 
 app.Run();

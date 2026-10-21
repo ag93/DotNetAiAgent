@@ -40,21 +40,20 @@ public sealed class TicketApiTestFixture : IDisposable
         db.Database.EnsureCreated();
     }
 
-    public HttpClient CreateClient(string? scope = null)
+    public HttpClient CreateClient(string? scope = null, string? objectId = null)
     {
         var client = Factory.CreateClient();
 
         if (scope is not null)
         {
-            client.DefaultRequestHeaders.Add(
-                "X-Test-User", "ticket-test-user");
-
-            client.DefaultRequestHeaders.Add(
-                "X-Test-Scope", scope);
+            client.DefaultRequestHeaders.Add("X-Test-User", "ticket-test-user");
+            client.DefaultRequestHeaders.Add("X-Test-Scope", scope);
+            client.DefaultRequestHeaders.Add("X-Test-ObjectId", objectId ?? "11111111-1111-4111-8111-111111111111");
         }
 
         return client;
     }
+
 
     public void Dispose()
     {

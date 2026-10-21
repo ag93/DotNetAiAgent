@@ -16,4 +16,6 @@ public sealed class TicketApprovalRequest
     public DateTimeOffset RequestedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? ReviewedAtUtc { get; set; }
     public string? ReviewedBy { get; set; }
+    public string? RequestedBy { get; set; }
+
 }

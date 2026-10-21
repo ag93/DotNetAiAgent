@@ -56,7 +56,10 @@ public sealed class SupportDbContext(DbContextOptions<SupportDbContext> options)
 
             entity.Property(approval => approval.ReviewedBy)
                 .HasMaxLength(200);
-
+            
+            entity.Property(approval => approval.RequestedBy)
+                .HasMaxLength(200);
+            
             entity.HasOne(approval => approval.Ticket)
                 .WithMany()
                 .HasForeignKey(approval => approval.TicketId)

@@ -74,6 +74,10 @@ namespace Support.Business.Api.Data.Migrations
                     b.Property<DateTimeOffset>("RequestedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RequestedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset?>("ReviewedAtUtc")
                         .HasColumnType("TEXT");
 

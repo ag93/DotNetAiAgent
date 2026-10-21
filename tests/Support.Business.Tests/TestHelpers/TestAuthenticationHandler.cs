@@ -35,6 +35,13 @@ public sealed class TestAuthenticationHandler : AuthenticationHandler<Authentica
             claims.Add(new Claim("scp", scope));
         }
 
+        var objectId = Request.Headers["X-Test-ObjectId"].FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(objectId))
+        {
+            claims.Add(new Claim("oid", objectId));
+        }
+
         var identity = new ClaimsIdentity(claims, authenticationType: Scheme.Name);
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
