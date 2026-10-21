@@ -1,9 +1,12 @@
+using Azure.AI.OpenAI;
+using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.AI;
 using Microsoft.Identity.Web;
 using Microsoft.OpenApi;
 using OllamaSharp;
 using Support.Agent.Api.Agents;
+using Support.Agent.Api.AI;
 using Support.Agent.Api.ErrorHandling;
 using Support.Agent.Api.Requests;
 using Support.Agent.Api.Security;
@@ -130,23 +133,36 @@ builder.Services.AddScoped<SupportAgent>();
 builder.Services.AddScoped<McpSupportAgent>();
 builder.Services.AddOpenApi();
 
-builder.Services.AddSingleton<IChatClient>(_ =>
-{
-    var baseUrl = builder.Configuration["Ollama:BaseUrl"]
-        ?? throw new InvalidOperationException("Ollama:BaseUrl is not configured.");
+builder.Services.AddChatClient(services =>
+    {
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var provider = AiProviderSettings.GetProvider(configuration);
 
-    var model = builder.Configuration["Ollama:Model"]
-        ?? throw new InvalidOperationException("Ollama:Model is not configured.");
+        if (provider == "Foundry")
+        {
+            var settings =  AiProviderSettings.GetFoundrySettings(configuration);
 
-    return new ChatClientBuilder(
-        new OllamaApiClient(new Uri(baseUrl), model))
-        .UseFunctionInvocation(
-            configure: invoker =>
-            {
-                invoker.MaximumIterationsPerRequest = 3;
-            })
-        .Build();
-});
+            return new AzureOpenAIClient(settings.Endpoint, new DefaultAzureCredential())
+                .GetChatClient(settings.Deployment)
+                .AsIChatClient();
+        }
+        
+        var baseUrl = builder.Configuration["Ollama:BaseUrl"]
+            ?? throw new InvalidOperationException("Ollama:BaseUrl is not configured.");
+
+        var model = builder.Configuration["Ollama:Model"]
+            ?? throw new InvalidOperationException("Ollama:Model is not configured.");
+        
+        return new ChatClientBuilder(new OllamaApiClient(new Uri(baseUrl), model))
+            .UseFunctionInvocation(
+                configure: invoker =>
+                {
+                    invoker.MaximumIterationsPerRequest = 3;
+                })
+            .Build();
+    })
+    .UseFunctionInvocation();
+
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DownstreamHttpExceptionHandler>();
