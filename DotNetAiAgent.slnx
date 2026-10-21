@@ -1,6 +1,16 @@
 <Solution>
   <Folder Name="/docs/">
     <File Path="architecture.md" />
+    <File Path="docs/demo.md" />
+  </Folder>
+  <Folder Name="/docs/screenshots/">
+    <File Path="docs/screenshots/01-agent-grounded-lookup.png" />
+    <File Path="docs/screenshots/02-ai-ticket-draft.png" />
+    <File Path="docs/screenshots/03-pending-resolution-approval.png" />
+    <File Path="docs/screenshots/04-resolution-approved.png" />
+    <File Path="docs/screenshots/04.1-approved-not-resolved.png" />
+    <File Path="docs/screenshots/04.2-agent-mcp-status-approved-not-resolved.png" />
+    <File Path="docs/screenshots/05-resolved-and-verified.png" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Support.Agent.Api/Support.Agent.Api.csproj" />
